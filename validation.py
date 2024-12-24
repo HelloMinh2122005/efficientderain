@@ -92,7 +92,9 @@ if __name__ == "__main__":
             true_target = true_target
         else:
             true_input = true_input.cuda()
-            true_target = true_target.cuda()            
+            true_target = true_target.cuda()
+
+            print('\nUsing GPU\n')            
 
         # Forward propagation
         with torch.no_grad():
@@ -114,16 +116,10 @@ if __name__ == "__main__":
         img_gt_recover = utils.recover_process(true_target, height = height_origin, width = width_origin)
         #psnr_sum = psnr_sum + utils.psnr(utils.recover_process(fake_target, height = height_origin, width = width_origin), utils.recover_process(true_target, height = height_origin, width = width_origin))
         psnr_sum = psnr_sum + utils.psnr(img_pred_recover, img_gt_recover)
-        ssim_sum = ssim_sum + compare_ssim(img_gt_recover, img_pred_recover, multichannel = True, data_range = 255) 
+        ssim_sum = ssim_sum + structural_similarity(img_gt_recover, img_pred_recover, multichannel = True, data_range = 255, win_size = 3) 
         eval_cnt = eval_cnt + 1
         
     psnr_ave = psnr_sum / eval_cnt
     ssim_ave = ssim_sum / eval_cnt
-    psnr_file = "./data/psnr_data.txt"
-    ssim_file = "./data/ssim_data.txt"
-    psnr_content = opt.load_name + ": " + str(psnr_ave) + "\n"
-    ssim_content = opt.load_name + ": " + str(ssim_ave) + "\n"
-    utils.text_save(content = psnr_content, filename = psnr_file)
-    utils.text_save(content = ssim_content, filename = ssim_file)
     
     

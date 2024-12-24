@@ -22,7 +22,7 @@ def create_generator(opt):
         print('Generator is created!')
     else:
         # Load a pre-trained network
-        pretrained_net = torch.load(opt.load_name)
+        pretrained_net = torch.load(opt.load_name, weights_only=True)
         load_dict(generator, pretrained_net)
         print('Generator is loaded!')
     return generator
@@ -43,24 +43,28 @@ def load_dict(process_net, pretrained_net):
 # ----------------------------------------
 #    Validation and Sample at training
 # ----------------------------------------
-def save_sample_png(sample_folder, sample_name, img_list, name_list, pixel_max_cnt = 255, height = -1, width = -1):
+def save_sample_png(sample_folder, sample_name, img_list, name_list,
+                    pixel_max_cnt=255, height=-1, width=-1):
     # Save image one-by-one
     for i in range(len(img_list)):
         img = img_list[i]
         # Recover normalization
         img = img * 255.0
         # Process img_copy and do not destroy the data of img
-        #print(img.size())
         img_copy = img.clone().data.permute(0, 2, 3, 1).cpu().numpy()
         img_copy = np.clip(img_copy, 0, pixel_max_cnt)
         img_copy = img_copy.astype(np.uint8)[0, :, :, :]
         img_copy = cv2.cvtColor(img_copy, cv2.COLOR_BGR2RGB)
         if (height != -1) and (width != -1):
-            img_copy = cv2.resize(img_copy, (width, height))
+            # Convert to int
+            h = int(height)
+            w = int(width)
+            img_copy = cv2.resize(img_copy, (w, h))
         # Save to certain path
         save_img_name = sample_name + '_' + name_list[i] + '.png'
         save_img_path = os.path.join(sample_folder, save_img_name)
         cv2.imwrite(save_img_path, img_copy)
+
 
 def save_sample_png_test(sample_folder, sample_name, img_list, name_list, pixel_max_cnt = 255):
     # Save image one-by-one
@@ -79,7 +83,7 @@ def save_sample_png_test(sample_folder, sample_name, img_list, name_list, pixel_
         save_img_path = os.path.join(sample_folder, save_img_name)
         cv2.imwrite(save_img_path, img_copy)
 
-def recover_process(img, height = -1, width = -1):
+def recover_process(img, height=-1, width=-1):
     img = img * 255.0
     img_copy = img.clone().data.permute(0, 2, 3, 1).cpu().numpy()
     img_copy = np.clip(img_copy, 0, 255)
@@ -87,8 +91,12 @@ def recover_process(img, height = -1, width = -1):
     img_copy = img_copy.astype(np.float32)
     img_copy = cv2.cvtColor(img_copy, cv2.COLOR_BGR2RGB)
     if (height != -1) and (width != -1):
-        img_copy = cv2.resize(img_copy, (width, height))
+        # Make sure height, width are plain ints
+        h = int(height)
+        w = int(width)
+        img_copy = cv2.resize(img_copy, (w, h))
     return img_copy
+
 
 def psnr(pred, target):
     #print(pred.shape)
@@ -135,21 +143,36 @@ def savetxt(name, loss_log):
     np_loss_log = np.array(loss_log)
     np.savetxt(name, np_loss_log)
 
+gt_path = '/data/uittogether2/GEN-dataset/tmp/efficientderain/ground_truth'
+prefix_gt = 'gt_img_'
 
 #rain100H/L / SPA
 def get_files(path):
     ret = []
-    path_rainy = path + "/small/rain"
-    path_gt = path + "/small/norain"
+    path_rainy = path 
+    path_gt = gt_path
+
+    index = 0
 
     for root, dirs, files in os.walk(path_rainy):
         files.sort()    
         
         for name in files:
-            if name.split('.')[1] != 'png':
+            print('\n',name,'\n')
+            if name.split('.')[1] != 'jpg':
                 continue
+
+            index += 1
+
+            if index == 6:
+                index -= 1
+
             file_rainy = path_rainy + "/" + name
-            file_gt = path_gt + "/" + name
+            file_gt = path_gt + "/" + f'{prefix_gt}{index}.jpg'
+
+            print('\nrainy:', file_rainy)
+            print('gt:', file_gt)
+            print('\n')
             ret.append([file_rainy, file_gt])
     return ret
 
